@@ -106,7 +106,7 @@ namespace WolfeReiter.AntiVirus
 		public static void WriteHelp()
 		{
 			Console.WriteLine( string.Format (@"
-Usage: [switches] fileOrDirName
+Usage: [mono] wrvirscan.exe [switches] fileOrDirName
 switches:
 	{0} or {1}		show help
 	{2} or {3}		show version info
