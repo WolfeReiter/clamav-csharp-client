@@ -31,13 +31,14 @@ namespace WolfeReiter.AntiVirus
 		/// Scan a directory for viruses with or without recursion.
 		/// </summary>
 		/// <param name="dir">Directory to scan</param>
+		/// <param name="recurse">whether to recurse</param>
 		void Scan(DirectoryInfo dir, bool recurse);
 
 		/// <summary>
 		/// Scan a file or directry with or without recursion. Recursion only applies to diretories.
 		/// </summary>
-		/// <param name="file"></param>
-		/// <param name="recurse"></param>
+		/// <param name="file">File or Directory to scan</param>
+		/// <param name="recurse">whether to recurse</param>
 		void Scan(FileSystemInfo file, bool recurse);
 
 		/// <summary>

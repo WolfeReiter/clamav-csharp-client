@@ -25,16 +25,42 @@ namespace WolfeReiter.AntiVirus
 
 		#region IVirScanAgent Members
 
+		/// <summary>
+		/// Scan a byte[] buffer for viruses.
+		/// </summary>
+		/// <param name="id">Identifier for the byte[]</param>
+		/// <param name="buff">byte bag to be scanned</param>
 		public abstract void Scan(string id, Byte[] buff);
 
+		/// <summary>
+		/// Scan a file for viruses, sending the result to the default async handler.
+		/// </summary>
+		/// <param name="file">file to be scanned</param>
 		public abstract void Scan(FileInfo file);
 
+		/// <summary>
+		/// Scan a directory for viruses non-recursively. 
+		/// </summary>
+		/// <param name="dir">Directory to scan</param>
 		public abstract void Scan(DirectoryInfo dir);
 
+		/// <summary>
+		/// Scan a directory for viruses non-recursively. 
+		/// </summary>
+		/// <param name="dir">Directory to scan</param>
+		/// <param name="recurse">Whether to recurse</param>
 		public abstract void Scan(DirectoryInfo dir, bool recurse);
 
+		/// <summary>
+		/// Scan a directory for viruses with or without recursion.
+		/// </summary>
+		/// <param name="file">File or Directory to scan</param>
+		/// <param name="recurse">whether to recurse</param>
 		public abstract void Scan(FileSystemInfo file, bool recurse);
 
+		/// <summary>
+		/// Get version information.
+		/// </summary>
 		public virtual string Version
 		{
 			get
@@ -98,6 +124,11 @@ namespace WolfeReiter.AntiVirus
 			if(completed!=null)
 				completed( e );
 		}
+
+		/// <summary>
+		/// Base handler for the ItemScanCompleted event. Logs every event to log4net.
+		/// </summary>
+		/// <param name="e"></param>
 		protected virtual void ItemScanCompletedHandler( ScanCompletedArgs e )
 		{
 			_logger.Info( string.Format( "SCANNED {0}\nRESULT {1}", e.Item, e.Result ) );
@@ -109,8 +140,15 @@ namespace WolfeReiter.AntiVirus
 		/// </summary>
 		public enum ThreadingModel
 		{
-			SyncronousSingleThead
-			,AsyncronousThreadPool
+			/// <summary>
+			/// Scans run on a syncronous thread and block each other. When the Scan method returns all scanning is complete.
+			/// </summary>
+			SyncronousSingleThead,
+			/// <summary>
+			/// Scans run in a thread pool. Each scan is queued to its own thread so that long-running scans do not block short scans.
+			/// The Scan method may exit before scanning is complete.
+			/// </summary>
+			AsyncronousThreadPool
 		}
 	}
 }

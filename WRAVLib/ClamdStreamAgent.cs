@@ -4,6 +4,7 @@ using System.IO;
 using System.Reflection;
 using System.Net;
 using System.Net.Sockets;
+using System.Security;
 using System.Text;
 using System.Threading;
 
@@ -204,34 +205,37 @@ namespace WolfeReiter.AntiVirus
 		/// <param name="file">File to scan.</param>
 		public override void Scan(FileInfo file)
 		{
-			FileStream inStream = null;
-			try
+			if( file != null )
 			{
-				if(file.Exists)
+				FileStream inStream = null;
+				try
 				{
-					inStream = file.OpenRead();
-					byte[] buff = new byte[inStream.Length];
-					inStream.Read(buff,0,buff.Length);
-					Scan(file.FullName, buff);		
+					if(file.Exists)
+					{
+						inStream = file.OpenRead();
+						byte[] buff = new byte[inStream.Length];
+						inStream.Read(buff,0,buff.Length);
+						Scan(file.FullName, buff);		
+					}
+					else
+					{
+						this.OnItemScanCompleted( new ScanCompletedArgs( file.FullName, "ERROR: The file does not exist." ) );
+					}
 				}
-				else
+				catch(Exception ex)
 				{
-					this.OnItemScanCompleted( new ScanCompletedArgs( file.FullName, "ERROR: The file does not exist." ) );
+					if( (ex is SecurityException || ex is FileLoadException) )
+						_logger.Info(ex.Message);	
+					else if(_logger.IsDebugEnabled)
+						_logger.Debug(ex);
+					else
+						_logger.Error(ex.Message);
 				}
-			}
-			catch(Exception ex)
-			{
-				if( (ex is UnauthorizedAccessException || ex is FileLoadException) )
-					_logger.Info(ex.Message);	
-				else if(_logger.IsDebugEnabled)
-					_logger.Debug(ex);
-				else
-					_logger.Error(ex.Message);
-			}
-			finally
-			{
-				if(inStream!=null)
-					inStream.Close();
+				finally
+				{
+					if(inStream!=null)
+						inStream.Close();
+				}
 			}
 		}
 
@@ -241,25 +245,28 @@ namespace WolfeReiter.AntiVirus
 		/// <param name="dir">Directory to scan.</param>
 		public override void Scan(DirectoryInfo dir)
 		{
-			if( dir.Exists )
+			if( dir != null )
 			{
-				try
+				if( dir.Exists )
 				{
-					foreach( FileInfo file in dir.GetFiles() )
-						Scan( file );
+					try
+					{
+						foreach( FileInfo file in dir.GetFiles() )
+							Scan( file );
+					}
+					catch(Exception ex)
+					{
+						if( (ex is SecurityException || ex is FileLoadException) )
+							_logger.Info(ex.Message);	
+						else if(_logger.IsDebugEnabled)
+							_logger.Debug(ex);
+						else
+							_logger.Error(ex.Message);
+					}
 				}
-				catch(Exception ex)
-				{
-					if( (ex is UnauthorizedAccessException || ex is FileLoadException) )
-						_logger.Info(ex.Message);	
-					else if(_logger.IsDebugEnabled)
-						_logger.Debug(ex);
-					else
-						_logger.Error(ex.Message);
-				}
+				else
+					this.OnItemScanCompleted( new ScanCompletedArgs( dir.FullName, "ERROR: The directory does not exist." ) );
 			}
-			else
-				this.OnItemScanCompleted( new ScanCompletedArgs( dir.FullName, "ERROR: The directory does not exist." ) );
 		}
 
 		/// <summary>
@@ -269,40 +276,43 @@ namespace WolfeReiter.AntiVirus
 		/// <param name="recurse">Recurse when true.</param>
 		public override void Scan(DirectoryInfo dir, bool recurse)
 		{
-			Scan ( dir );
-			if(recurse)
-			{		
-				try
-				{
-					foreach( DirectoryInfo subdir in dir.GetDirectories() )
+			if( dir!= null )
+			{
+				Scan ( dir );
+				if(recurse)
+				{		
+					try
 					{
-						try
+						foreach( DirectoryInfo subdir in dir.GetDirectories() )
 						{
-							foreach( FileInfo file in subdir.GetFiles() )
+							try
 							{
-								Scan( file );
+								foreach( FileInfo file in subdir.GetFiles() )
+								{
+									Scan( file );
+								}
 							}
+							catch(Exception ex)
+							{
+								if( (ex is SecurityException || ex is FileLoadException) )
+									_logger.Info(ex.Message);	
+								else if(_logger.IsDebugEnabled)
+									_logger.Debug(ex);
+								else
+									_logger.Error(ex.Message);
+							}
+							Scan( subdir, recurse );
 						}
-						catch(Exception ex)
-						{
-							if( (ex is UnauthorizedAccessException || ex is FileLoadException) )
-								_logger.Info(ex.Message);	
-							else if(_logger.IsDebugEnabled)
-								_logger.Debug(ex);
-							else
-								_logger.Error(ex.Message);
-						}
-						Scan( subdir, recurse );
 					}
-				}
-				catch (Exception ex)
-				{
-					if( ex is System.UnauthorizedAccessException )
-						_logger.Info(ex.Message);	
-					else if(_logger.IsDebugEnabled)
-						_logger.Debug(ex);
-					else
-						_logger.Error(ex.Message);
+					catch (Exception ex)
+					{
+						if( ex is SecurityException )
+							_logger.Info(ex.Message);	
+						else if(_logger.IsDebugEnabled)
+							_logger.Debug(ex);
+						else
+							_logger.Error(ex.Message);
+					}
 				}
 			}
 		}
@@ -314,12 +324,15 @@ namespace WolfeReiter.AntiVirus
 		/// <param name="recurse">Recurse when true if FileSystem object is a directory. Otherwise this argument is ignored..</param>
 		public override void Scan(FileSystemInfo file, bool recurse)
 		{
-			if(file is FileInfo)
-				Scan(file as FileInfo);
-			else if (file is DirectoryInfo)
-				Scan(file as DirectoryInfo, recurse);
-			else
-				throw new NotSupportedException( string.Format( "{0} is not a supported type of FileSystemInfo. Use FileInfo or DirectoryInfo.",file.GetType() ) );
+			if( file!=null) 
+			{
+				if(file is FileInfo)
+					Scan(file as FileInfo);
+				else if (file is DirectoryInfo)
+					Scan(file as DirectoryInfo, recurse);
+				else
+					throw new NotSupportedException( string.Format( "{0} is not a supported type of FileSystemInfo. Use FileInfo or DirectoryInfo.",file.GetType() ) );
+			}
 		}
 
 		/// <summary>
@@ -380,7 +393,7 @@ namespace WolfeReiter.AntiVirus
 		/// <param name="e"></param>
 		protected override void ItemScanCompletedHandler( ScanCompletedArgs e )
 		{
-			if(_verbose || e.Result.IndexOf(FOUND)>-1 )
+			if( _verbose || _logger.IsDebugEnabled || e.Result.IndexOf(FOUND)>-1 )
 				_logger.Info( string.Format( "SCANNED {0} RESULT {1}", e.Item, e.Result ) );
 		}
 
