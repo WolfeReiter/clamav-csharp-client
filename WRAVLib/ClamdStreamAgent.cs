@@ -237,14 +237,11 @@ namespace WolfeReiter.AntiVirus
 				catch(Exception ex)
 				{
 					if( (ex is UnauthorizedAccessException || ex is SecurityException || ex is FileLoadException) )
-						_logger.Info(ex.Message);	
+						_logger.Error(ex.Message);	
 					else if(_logger.IsDebugEnabled)
-						_logger.Debug(ex);
+						_logger.Error(ex);
 					else
-					{
-						_logger.Error(ex.Message);
 						throw;
-					}
 				}
 				finally
 				{
@@ -272,14 +269,11 @@ namespace WolfeReiter.AntiVirus
 					catch(Exception ex)
 					{
 						if( ex is UnauthorizedAccessException || ex is SecurityException || ex is FileLoadException )
-							_logger.Info(ex.Message);	
+							_logger.Error(ex.Message);	
 						else if(_logger.IsDebugEnabled)
-							_logger.Debug(ex);
+							_logger.Error(ex);
 						else
-						{
-							_logger.Error(ex.Message);
 							throw;
-						}
 					}
 				}
 				else
@@ -313,14 +307,11 @@ namespace WolfeReiter.AntiVirus
 							catch(Exception ex)
 							{
 								if( ex is UnauthorizedAccessException || ex is SecurityException || ex is FileLoadException )
-									_logger.Info(ex.Message);	
+									_logger.Error(ex.Message);	
 								else if(_logger.IsDebugEnabled)
-									_logger.Debug(ex);
+									_logger.Error(ex);
 								else
-								{
-									_logger.Error(ex.Message);
 									throw;
-								}
 							}
 							Scan( subdir, recurse );
 						}
@@ -328,14 +319,11 @@ namespace WolfeReiter.AntiVirus
 					catch (Exception ex)
 					{
 						if( ex is UnauthorizedAccessException || ex is SecurityException )
-							_logger.Info(ex.Message);	
+							_logger.Error(ex.Message);	
 						else if(_logger.IsDebugEnabled)
-							_logger.Debug(ex);
+							_logger.Error(ex);
 						else
-						{
-							_logger.Error(ex.Message);
 							throw;
-						}
 					}
 				}
 			}
