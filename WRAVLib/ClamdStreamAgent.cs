@@ -14,9 +14,10 @@ namespace WolfeReiter.AntiVirus
 	public class ClamdStreamAgent : VirScanAgent, IVirScanAgent
 	{
 		private const string SCAN_VERB = "STREAM";
+		private const string VER_VERB  = "VERSION";
 		private string	_host;
 		private int		_port;
-		private bool	_queueAsync = false;
+		private VirScanAgent.ThreadingModel	_threadModel;
 		/// <summary>
 		/// Ctor. Synchronous or async agent. 
 		/// </summary>
@@ -26,12 +27,12 @@ namespace WolfeReiter.AntiVirus
 		/// of an upload/download or console applciation.</remarks>
 		/// <param name="host">computer running clamd</param>
 		/// <param name="port">TCP port clamd listens on</param>
-		/// <param name="useAsyncScanQueue">whether to queue each file to it's own thread for scanning</param>
-		public ClamdStreamAgent(string host, int port, bool useAsyncScanQueue)
+		/// <param name="model">whether to queue each file to it's own thread for scanning</param>
+		public ClamdStreamAgent(string host, int port, VirScanAgent.ThreadingModel model)
 		{
 			_host = host;
 			_port = port;
-			_queueAsync = useAsyncScanQueue;
+			_threadModel = model;
 		}
 		/// <summary>
 		/// Ctor. Constructs a syncronous scanning agent. This is best for console applications or single file scanning
@@ -39,7 +40,7 @@ namespace WolfeReiter.AntiVirus
 		/// </summary>
 		/// <param name="host">computer running clamd</param>
 		/// <param name="port">TCP port clamd listens on</param>
-		public ClamdStreamAgent(string host, int port) : this(host, port, false){}
+		public ClamdStreamAgent(string host, int port) : this(host, port, VirScanAgent.ThreadingModel.SyncronousSingleThead){}
 
 		protected void SendStream(byte[] buff, int streamPort)
 		{
@@ -74,47 +75,14 @@ namespace WolfeReiter.AntiVirus
 				throw new ArgumentException("DoByteScan requires a ClamdStreamAgent.ByteScanArgs struct as its parameter");
 
 			ByteScanArgs scanArgs = o as ByteScanArgs;
-
-			string outstr = null;
-			using ( TcpClient tcpclient = new TcpClient( this.ClamdHost, this.ClamdPort ) )
-			using (NetworkStream netStream = tcpclient.GetStream() )
-			using (StreamWriter outputStream = new StreamWriter(netStream) )
-			using (StreamReader inputStream = new StreamReader(netStream) )
-			{
-				outputStream.WriteLine( SCAN_VERB );
-				outputStream.Flush();
-				
-				string portstr = inputStream.ReadLine();
-				string[] args = portstr.Split(' ');
-				
-				SendStream ( scanArgs.Buff, int.Parse (args[args.Length-1]) );
-				
-				outstr = inputStream.ReadLine();
-
-				outputStream.Close();
-				inputStream.Close();
-				netStream.Close();
-				tcpclient.Close();
-			}
-			
-			this.OnItemScanCompleted( new ScanCompletedArgs( scanArgs.Id, outstr ) );
+			ByteScan(scanArgs);
 		}
 
-
-
-		#region IVirScanAgent Members
-
-		public override void Scan(string id, byte[] buff)
+		protected virtual void ByteScan(ByteScanArgs args)
 		{
-			if(_queueAsync)
+			string outstr = null;
+			try
 			{
-				ByteScanArgs args = new ByteScanArgs(id,buff);
-				ThreadPool.QueueUserWorkItem( new WaitCallback( this.DoByteScan ), args );
-			}
-			else
-			{
-
-				string outstr = null;
 				using ( TcpClient tcpclient = new TcpClient( this.ClamdHost, this.ClamdPort ) )
 				using (NetworkStream netStream = tcpclient.GetStream() )
 				using (StreamWriter outputStream = new StreamWriter(netStream) )
@@ -124,9 +92,9 @@ namespace WolfeReiter.AntiVirus
 					outputStream.Flush();
 				
 					string portstr = inputStream.ReadLine();
-					string[] args = portstr.Split(' ');
+					string[] daemonargs = portstr.Split(' ');
 				
-					SendStream ( buff, int.Parse (args[args.Length-1]) );
+					SendStream ( args.Buff, int.Parse (daemonargs[daemonargs.Length-1]) );
 				
 					outstr = inputStream.ReadLine();
 
@@ -135,8 +103,33 @@ namespace WolfeReiter.AntiVirus
 					netStream.Close();
 					tcpclient.Close();
 				}
-			
-				this.OnItemScanCompleted( new ScanCompletedArgs( id, outstr ) );
+			}
+			catch(SocketException sex)
+			{
+				//TDOD: log4net here
+				outstr = sex.Message;
+			}
+			finally
+			{
+				this.OnItemScanCompleted( new ScanCompletedArgs( args.Id, outstr ) );
+			}
+		}
+
+		#region IVirScanAgent Members
+
+		public override void Scan(string id, byte[] buff)
+		{
+			ByteScanArgs args = new ByteScanArgs(id,buff);
+			switch(_threadModel)
+			{
+				case VirScanAgent.ThreadingModel.AsyncronousThreadPool :
+					ThreadPool.QueueUserWorkItem( new WaitCallback( this.DoByteScan ), args );
+					break;
+				case VirScanAgent.ThreadingModel.SyncronousSingleThead :
+					ByteScan(args);			
+					break;
+				default :
+					throw new NotSupportedException( string.Format("The threading model, {0}, is not supported by  ClamdStreamAgent.",_threadModel) );
 			}
 		}
 
@@ -201,6 +194,50 @@ namespace WolfeReiter.AntiVirus
 				throw new NotSupportedException( string.Format( "{0} is not a supported type of FileSystemInfo. Use FileInfo or DirectoryInfo.",file.GetType() ) );
 		}
 
+		public string ClamdVersion
+		{
+			get
+			{
+				string portstr = null;
+				try
+				{
+					using ( TcpClient tcpclient = new TcpClient( this.ClamdHost, this.ClamdPort ) )
+					using (NetworkStream netStream = tcpclient.GetStream() )
+					using (StreamWriter outputStream = new StreamWriter(netStream) )
+					using (StreamReader inputStream = new StreamReader(netStream) )
+					{
+						outputStream.WriteLine( VER_VERB );
+						outputStream.Flush();
+				
+						portstr = inputStream.ReadLine();
+
+						outputStream.Close();
+						inputStream.Close();
+						netStream.Close();
+						tcpclient.Close();
+					}
+				}
+				catch(SocketException sex)
+				{
+					//TODO: log4net here
+					portstr = sex.Message;
+				}
+				return portstr;
+				
+			}
+		}
+
+		/// <summary>
+		/// Returns the version of WRAVLib and the scan engine.
+		/// </summary>
+		public  string Version
+		{
+			get
+			{
+				return string.Format("{0}\nScan Engine: {1}", AgentVersion, ClamdVersion);
+			}
+			
+		}
 
 		#endregion
 

@@ -41,6 +41,11 @@ namespace WolfeReiter.AntiVirus
 		/// <param name="recurse"></param>
 		void Scan(FileSystemInfo file, bool recurse);
 
+		/// <summary>
+		/// Get version information.
+		/// </summary>
+		string Version {get;}
+
 		event ScanCompleted ItemScanCompleted;
 	}
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.IO;
+using System.Reflection;
 
 namespace WolfeReiter.AntiVirus
 {
@@ -27,24 +28,38 @@ namespace WolfeReiter.AntiVirus
 
 		public abstract void Scan(FileSystemInfo file, bool recurse);
 
-		#endregion
-
-		/// <summary>
-		/// Argument for a ByteScan WaitCallback abstract method.
-		/// </summary>
-		protected class ByteScanArgs
+		public virtual string Version
 		{
-			private string _id;
-			private byte[] _buff;
-			public ByteScanArgs(string id, byte[] buff)
+			get
 			{
-				_buff = buff;
-				_id	 = id;
+				return AgentVersion;
 			}
-			public byte[] Buff { get { return _buff; } }
-			public string Id { get { return _id; } }
 		}
 
+		#endregion
+		
+		public string AgentVersion
+		{
+			get
+			{
+				string title=null, descr=null, copyright=null, version;
+	
+				Assembly assembly = Assembly.GetExecutingAssembly();
+	
+				version = assembly.GetName().Version.ToString();
+				object[] titles = assembly.GetCustomAttributes(typeof(AssemblyTitleAttribute),true);
+				object[] descrs = assembly.GetCustomAttributes(typeof(AssemblyDescriptionAttribute),true);
+				object[] copyrights = assembly.GetCustomAttributes(typeof(AssemblyCopyrightAttribute),true);
+				if(titles.Length>0)
+					title = ((AssemblyTitleAttribute)titles[0]).Title;
+				if(descrs.Length>0)
+					descr = ((AssemblyDescriptionAttribute)descrs[0]).Description;
+				if(copyrights.Length>0)
+					copyright = ((AssemblyCopyrightAttribute)copyrights[0]).Copyright;
+
+				return string.Format("{0} version {1} \n{2}\n{3}", title, version, descr, copyright);
+			}
+		}
 
 		/// <summary>
 		/// Event occurs when an item has been scanned and a result is available.
@@ -67,6 +82,12 @@ namespace WolfeReiter.AntiVirus
 			Console.WriteLine( string.Format( "SCANNED {0}\nRESULT {1}", e.Item, e.Result ) );
 		}
 
+		public enum ThreadingModel
+		{
+			SyncronousSingleThead
+			,AsyncronousThreadPool
+			
+		}
 	}
 
 	#region ScanCompleted delegate
