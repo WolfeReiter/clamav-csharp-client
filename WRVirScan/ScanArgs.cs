@@ -1,14 +1,24 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 
-namespace WolfeReiter.AntiVirus
+namespace WolfeReiter.AntiVirus.ConsoleDemo
 {
 	/// <summary>
 	/// ScanArgs is a helper class that translates the arguments passed on the command-line to something more useful.
 	/// </summary>
 	public class ScanArgs
 	{
+
+		#region resource name constants
+		private const string STR_PARSE_ARGUMENT_EXCEPTION_HOSTNAME		= "ScanArgs.Parse.ArgumentException-HostName";
+		private const string STR_PARSE_ARGUMENT_EXCEPTION_PORT			= "ScanArgs.Parse.ArgumentException-Port";
+		private const string STR_PARSE_ARGUMENT_EXCEPTION_PORT_MISSING	= "ScanArgs.Parse.ArgumentException-PortMissing";
+		private const string STR_PARSE_ARGUMENT_EXCEPTION_UNKNOWN		= "ScanArgs.Parse.ArgumentException-Unknown";
+		#endregion
+		
+		#region constants for defaults and switches
 		/// <summary>
 		/// Short hostname switch.
 		/// </summary>
@@ -65,6 +75,7 @@ namespace WolfeReiter.AntiVirus
 		/// Default clamd port.
 		/// </summary>
 		public const int    CLAMD_PORT				= 3310;
+		#endregion
 
 		private FileSystemInfo _filesystem;
 		private bool _showHelp, _showVer, _recurse, _verbose;
@@ -114,7 +125,7 @@ namespace WolfeReiter.AntiVirus
 							}
 							else
 							{
-								throw new ArgumentException( string.Format( "BAD ARGUMENT: A valid host name must follow {0} or {1}.", FLAG_CLAMD_HOST_SHORT, FLAG_CLAMD_HOST_LONG ) );
+								throw new ArgumentException( string.Format( CultureInfo.CurrentCulture, ResourceManagers.Strings.GetString( STR_PARSE_ARGUMENT_EXCEPTION_HOSTNAME ), FLAG_CLAMD_HOST_SHORT, FLAG_CLAMD_HOST_LONG ) );
 							}
 							break;
 						case FLAG_CLAMD_PORT_SHORT :
@@ -124,27 +135,27 @@ namespace WolfeReiter.AntiVirus
 							{
 								try
 								{
-									sargs.Port = int.Parse( args[++i] );
+									sargs.Port = int.Parse( args[++i], CultureInfo.InvariantCulture );
 								}
 								catch (FormatException ex)
 								{
-									throw new ArgumentException( string.Format( "BAD TCP PORT: {0}", ex.Message ) );
+									throw new ArgumentException( string.Format( CultureInfo.CurrentCulture, ResourceManagers.Strings.GetString( STR_PARSE_ARGUMENT_EXCEPTION_PORT ), ex.Message ) );
 								}
 								catch (OverflowException ex)
 								{
-									throw new ArgumentException( string.Format( "BAD TCP PORT: {0}", ex.Message ) );
+									throw new ArgumentException( string.Format( CultureInfo.CurrentCulture, ResourceManagers.Strings.GetString( STR_PARSE_ARGUMENT_EXCEPTION_PORT ), ex.Message ) );
 								}
 							}
 							else
 							{
-								throw new ArgumentException( string.Format( "BAD ARGUMENT: A valid TCP port number must follow {0} or {1}.", FLAG_CLAMD_PORT_SHORT, FLAG_CLAMD_PORT_LONG ) );
+								throw new ArgumentException( string.Format( CultureInfo.CurrentCulture, ResourceManagers.Strings.GetString( STR_PARSE_ARGUMENT_EXCEPTION_PORT_MISSING ), FLAG_CLAMD_PORT_SHORT, FLAG_CLAMD_PORT_LONG ) );
 							}
 							break;
 
 						case FLAG_VERSION_SHORT :
 							goto case FLAG_VERSION_LONG;
 						case FLAG_VERSION_LONG :
-							sargs.ShowVer = true;
+							sargs.ShowVersion = true;
 							break;
 
 						case FLAG_HELP_SHORT :
@@ -166,7 +177,7 @@ namespace WolfeReiter.AntiVirus
 							break;
 
 						default :
-							throw new ArgumentException( string.Format( "BAD ARGUMENT: Argument, {0}, was not recognized.", args[1] ) );
+							throw new ArgumentException( string.Format( CultureInfo.CurrentCulture, ResourceManagers.Strings.GetString( STR_PARSE_ARGUMENT_EXCEPTION_UNKNOWN ), args[1] ) );
 					}
 				}
 			}
@@ -205,7 +216,7 @@ namespace WolfeReiter.AntiVirus
 		/// <summary>
 		/// Get-Set. Whehter to show version information.
 		/// </summary>
-		public bool ShowVer
+		public bool ShowVersion
 		{
 			get { return _showVer; }
 			set { _showVer = value; }

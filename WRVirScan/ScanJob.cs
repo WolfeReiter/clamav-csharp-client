@@ -1,16 +1,25 @@
 using System;
+using System.Globalization;
 using System.Reflection;
 
-namespace WolfeReiter.AntiVirus
+namespace WolfeReiter.AntiVirus.ConsoleDemo
 {
 	/// <summary>
 	/// ScanJob manages a virus scanning job.
 	/// </summary>
 	public class ScanJob
 	{
+		#region resource name constants
+		private const string STR_RUN_DEBUG_MSG		= "ScanJob.Run_DebugMessage";
+		private const string STR_HELP_TEMPLATE		= "ScanJob.WriteHelp";
+		private const string STR_WRITE_VERSION		= "ScanJob.WriteVersion";
+		private const string STR_TIMESPAN_TEMPLATE	= "ScanJob.WriteStats_TimeSpan";
+		private const string STR_STATS_TEMPLATE		= "ScanJob.WriteStats_Template";
+		#endregion
+
 		private ScanArgs _args;
 		private int _scancount, _vircount;
-		private IVirScanAgent _agent;
+		private IVirusScanAgent _agent;
 
 		/// <summary>
 		/// CTOR.
@@ -27,8 +36,8 @@ namespace WolfeReiter.AntiVirus
 			_vircount	= 0;
 
 			_agent = new ClamdStreamAgent(args.Host, args.Port, args.Verbose);
-			_agent.ItemScanCompleted += new ScanCompleted(_agent_ItemScanCompleted);
-			_agent.VirusFound		 += new VirusFound(_agent_VirusFound);
+			_agent.ItemScanCompleted += new ScanCompletedEventHandler(_agent_ItemScanCompleted);
+			_agent.VirusFound		 += new ScanCompletedEventHandler(_agent_VirusFound);
 		}
 
 		/// <summary>
@@ -40,7 +49,7 @@ namespace WolfeReiter.AntiVirus
 
 			if( _args.ShowHelp || _args.FileSystem==null )
 				WriteHelp();
-			if ( _args.ShowVer )
+			if ( _args.ShowVersion )
 				WriteVersion( _agent );
 			if( !_args.ShowHelp && _args.FileSystem!=null )
 			{
@@ -50,7 +59,7 @@ namespace WolfeReiter.AntiVirus
         
 #if DEBUG 
 			//handy when using Visual Studio debug. Keeps the console from closing.
-			Console.WriteLine("Press ENTER or RETURN to exit.");
+			Console.WriteLine( ResourceManagers.Strings.GetString(STR_RUN_DEBUG_MSG) );
 			Console.ReadLine();
 #endif
 		}
@@ -59,7 +68,7 @@ namespace WolfeReiter.AntiVirus
 		/// <summary>
 		/// Get/Set. ScanArgs. Most useful for running consecutive jobs with a single set of counters.
 		/// </summary>
-		public ScanArgs args
+		public ScanArgs Args
 		{
 			get { return _args; }
 			set { _args = value; }
@@ -82,20 +91,22 @@ namespace WolfeReiter.AntiVirus
 		}
 		#endregion
 
-		#region IVirScanAgent event handlers
+		#region IVirusScanAgent event handlers
 		/// <summary>
 		/// Handles the _agent.ItemScanCompleted event to increment a counter.
 		/// </summary>
+		/// <param name="sender"></param>
 		/// <param name="e"></param>
-		private void _agent_ItemScanCompleted(ScanCompletedArgs e)
+		private void _agent_ItemScanCompleted(object sender, ScanCompletedEventArgs e)
 		{
 			_scancount++;
 		}
 		/// <summary>
 		/// Handles the _agent.VirusFound event to increment a counter.
 		/// </summary>
+		/// <param name="sender"></param>
 		/// <param name="e"></param>
-		private void _agent_VirusFound(ScanCompletedArgs e)
+		private void _agent_VirusFound(object sender, ScanCompletedEventArgs e)
 		{
 			_vircount++;
 		}
@@ -107,18 +118,7 @@ namespace WolfeReiter.AntiVirus
 		/// </summary>
 		public static void WriteHelp()
 		{
-			Console.WriteLine( string.Format (@"
-Usage: [mono] wrvirscan.exe [switches] fileOrDirName
-switches:
-	{0} or {1}		show help
-	{2} or {3}		show version info
-	{4} or {5}		be verbose
-	{6} or {7}		recurse
-	{8} or {9}	host ex: {8} {10}
-	(default host is {10}) 
-	{11} or {12}		tcp port ex: {11} {13}
-	(default port is {13}) 
-"
+			Console.WriteLine( string.Format (CultureInfo.CurrentCulture, ResourceManagers.Strings.GetString( STR_HELP_TEMPLATE )
 				,ScanArgs.FLAG_HELP_SHORT		,ScanArgs.FLAG_HELP_LONG
 				,ScanArgs.FLAG_VERSION_SHORT	,ScanArgs.FLAG_VERSION_LONG
 				,ScanArgs.FLAG_VERBOSE_SHORT	,ScanArgs.FLAG_VERBOSE_LONG
@@ -130,8 +130,8 @@ switches:
 		/// <summary>
 		/// Writes the console client version and _agent version to the console standard out.
 		/// </summary>
-		/// <param name="_agent">IVirScanAgent instance to call Version upon.</param>
-		public static void WriteVersion(IVirScanAgent _agent)
+		/// <param name="agent">IVirusScanAgent instance to call Version upon.</param>
+		public static void WriteVersion(IVirusScanAgent agent)
 		{
 			string title=null, version;
 		
@@ -142,8 +142,8 @@ switches:
 			if(titles.Length>0)
 				title = ((AssemblyTitleAttribute)titles[0]).Title;
 
-			Console.WriteLine( string.Format("{0} version {1}", title, version) );
-			Console.WriteLine( _agent.Version );
+			Console.WriteLine( string.Format(CultureInfo.CurrentCulture, ResourceManagers.Strings.GetString( STR_WRITE_VERSION ), title, version) );
+			Console.WriteLine( agent.Version );
 			Console.WriteLine();
 		}
 
@@ -153,16 +153,9 @@ switches:
 		private void WriteStats(DateTime startTime)
 		{
 			TimeSpan elapsed = DateTime.Now - startTime;
-			const string TIME = "{0}d:{1}h:{2}m:{3}s.{4}ms";
-			const string STATS = @"
-***********************************
-** FILES SCANNED: {0}
-** VIRUSES FOUND: {1}
-** ELAPSED TIME:  {2}
-***********************************
-";
-			string timestr = string.Format(TIME,elapsed.Days,elapsed.Hours,elapsed.Minutes,elapsed.Seconds,elapsed.Milliseconds);
-			Console.WriteLine( string.Format( STATS, _scancount, _vircount, timestr ) );
+
+			string timestr = string.Format( CultureInfo.CurrentCulture, ResourceManagers.Strings.GetString( STR_TIMESPAN_TEMPLATE ), elapsed.Days, elapsed.Hours, elapsed.Minutes, elapsed.Seconds, elapsed.Milliseconds);
+			Console.WriteLine( string.Format( CultureInfo.CurrentCulture, ResourceManagers.Strings.GetString( STR_STATS_TEMPLATE ), _scancount, _vircount, timestr ) );
 		}
 		#endregion
 	}
