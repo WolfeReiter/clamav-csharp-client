@@ -69,22 +69,24 @@ namespace WolfeReiter.AntiVirus
 		/// <summary>
 		/// Sends a byte[] to a clamd port.
 		/// </summary>
-		/// <param name="buff">byte[] to scan</param>
+		/// <param name="stream">Stream to scan</param>
 		/// <param name="streamPort">TCP port to send buffer for scanning</param>
-		protected void SendStream(byte[] buff, int streamPort)
+		protected void SendStream(Stream stream, int streamPort)
 		{
 			const int TCP_CHUNK = 1460;
+			byte[] buff = new byte[TCP_CHUNK];
 			try
 			{
 				using ( TcpClient tcpclient = new TcpClient( this.ClamdHost, streamPort ) )
 				using ( NetworkStream netstream = tcpclient.GetStream() )
 				{	
-					for( int i=0; i<buff.Length; i+=TCP_CHUNK )
+					for( stream.Position=0; stream.Position < stream.Length; stream.Position+=TCP_CHUNK)
 					{
-						if( (buff.Length - i) >= TCP_CHUNK)
-                            netstream.Write( buff, i, TCP_CHUNK );
-						else
-							netstream.Write( buff, i, buff.Length-i );
+						if( (stream.Length - stream.Position) < TCP_CHUNK)
+							buff = new byte[Convert.ToInt32( stream.Length-stream.Position )];
+							
+						stream.Read( buff, 0, buff.Length );
+						netstream.Write( buff, 0, buff.Length );
 						netstream.Flush();
 					}
 					netstream.Close();
@@ -108,15 +110,15 @@ namespace WolfeReiter.AntiVirus
 		/// <summary>
 		/// WaitCallback method for performing a byte[] scan on an independent thread using System.Treading.QueueUserWorkItem.
 		/// </summary>
-		/// <exception cref="ArgumentException">Throws argument "o" is not an instance of ByteScanArgs.</exception>
-		/// <param name="o">Instance of ByteScanArgs.</param>
-		protected virtual void DoByteScan(object o)
+		/// <exception cref="ArgumentException">Throws argument "o" is not an instance of StreamScanArgs.</exception>
+		/// <param name="o">Instance of StreamScanArgs.</param>
+		protected virtual void DoStreamScan(object o)
 		{
-			if( !(o is ByteScanArgs) )
+			if( !(o is StreamScanArgs) )
 				throw new ArgumentException( ResourceManagers.Strings.GetString(STR_DO_BYTE_SCAN_ARG_EX) );
 
-			ByteScanArgs scanArgs = (ByteScanArgs)o;
-			ByteScan(scanArgs);
+			StreamScanArgs scanArgs = (StreamScanArgs)o;
+			StreamScan(scanArgs);
 		}
 
 		/// <summary>
@@ -124,8 +126,8 @@ namespace WolfeReiter.AntiVirus
 		/// The ItemScanCompleted event is raised whenever this method completes. If a virus is found, this method raises
 		/// the VirusFound event.
 		/// </summary>
-		/// <param name="args">ByteScanArgs instance.</param>
-		protected virtual void ByteScan(ByteScanArgs args)
+		/// <param name="args">StreamScanArgs instance.</param>
+		protected virtual void StreamScan(StreamScanArgs args)
 		{
 			string outstr = null;
 			try
@@ -141,7 +143,7 @@ namespace WolfeReiter.AntiVirus
 					string portstr = inputStream.ReadLine();
 					string[] daemonargs = portstr.Split(' ');
 				
-					SendStream ( args.GetBuffer(), int.Parse (daemonargs[daemonargs.Length-1], CultureInfo.InvariantCulture ) );
+					SendStream ( args.Stream, int.Parse (daemonargs[daemonargs.Length-1], CultureInfo.InvariantCulture ) );
 				
 					outstr = inputStream.ReadLine();
 
@@ -153,6 +155,8 @@ namespace WolfeReiter.AntiVirus
 
 				if(outstr!=null && outstr.IndexOf(FOUND)>-1)
 					this.OnVirusFound( new ScanCompletedEventArgs( args.Id, outstr ) );
+				
+				this.OnItemScanCompleted( new ScanCompletedEventArgs( args.Id, outstr ) );
 			}
 			catch(Exception ex)
 			{
@@ -167,8 +171,6 @@ namespace WolfeReiter.AntiVirus
 					throw;
 			}
 
-			this.OnItemScanCompleted( new ScanCompletedEventArgs( args.Id, outstr ) );
-
 		}
 
 		#region IVirusScanAgent Members
@@ -177,34 +179,23 @@ namespace WolfeReiter.AntiVirus
 		/// Scan a byte[] bag.
 		/// </summary>
 		/// <param name="id">Unique identifier for the buffer (eg. filename, url or database key, etc.)</param>
-		/// <param name="buff">byte[] bag to scan</param>
-		public override void Scan(string id, byte[] buff)
+		/// <param name="stream">Stream to scan</param>
+		public override void Scan(string id, Stream stream)
 		{
-			ByteScanArgs args = new ByteScanArgs(id,buff);
+			StreamScanArgs args = new StreamScanArgs(id,stream);
 			switch(_threadModel)
 			{
 				case VirusScanAgent.ThreadingModel.AsynchronousThreadPool :
-					ThreadPool.QueueUserWorkItem( new WaitCallback( this.DoByteScan ), args );
+					ThreadPool.QueueUserWorkItem( new WaitCallback( this.DoStreamScan ), args );
 					break;
 				case VirusScanAgent.ThreadingModel.SynchronousSingleThread :
-					ByteScan(args);			
+					StreamScan(args);			
 					break;
 				default :
 					throw new NotSupportedException( string.Format(CultureInfo.CurrentCulture, ResourceManagers.Strings.GetString(STR_SCAN_NOT_SUPPORTED_EX_THREADING), _threadModel) );
 			}
 		}
 
-		/// <summary>
-		/// Scan a stream.
-		/// </summary>
-		/// <param name="id">Identifier for the stream</param>
-		/// <param name="stream">Stream to scan</param>
-		public override void Scan(string id, Stream stream)
-		{
-			byte[] buff = new byte[stream.Length];
-			stream.Read(buff,0,buff.Length);
-			Scan(id, buff);
-		}
 
 		/// <summary>
 		/// Scan a file.
@@ -226,13 +217,6 @@ namespace WolfeReiter.AntiVirus
 					{
 						this.OnItemScanCompleted( new ScanCompletedEventArgs( file.FullName, ResourceManagers.Strings.GetString(STR_SCAN_ERR_FILE_NOT_EXIST) ) );
 					}
-				}
-				catch(OutOfMemoryException) 
-				{
-					// can happen if several HUGE files are opened in a row
-					// we need to force the garbage collector to free up some space
-					GC.Collect();
-					Scan ( file );
 				}
 				catch(Exception ex)
 				{

@@ -8,12 +8,6 @@ namespace WolfeReiter.AntiVirus
 	/// </summary>
 	public interface IVirusScanAgent
 	{
-		/// <summary>
-		/// Scan a byte[] buffer for viruses.
-		/// </summary>
-		/// <param name="id">Identifier for the byte[]</param>
-		/// <param name="buff">byte bag to be scanned</param>
-		void Scan(string id, Byte[] buff);
 
 		/// <summary>
 		/// Scan a Stream for viruses.

@@ -31,12 +31,6 @@ namespace WolfeReiter.AntiVirus
 
 		#region IVirusScanAgent Members
 
-		/// <summary>
-		/// Scan a byte[] buffer for viruses.
-		/// </summary>
-		/// <param name="id">Identifier for the byte[]</param>
-		/// <param name="buff">byte bag to be scanned</param>
-		public abstract void Scan(string id, Byte[] buff);
 
 		/// <summary>
 		/// Scan a Stream for viruses.
