@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Security;
 using log4net;
@@ -8,8 +9,13 @@ namespace WolfeReiter.AntiVirus
 	/// <summary>
 	/// FileSystemFactory generates instances FileSystemInfo object from a file or directory name.
 	/// </summary>
-	public class FileSystemFactory
+	public sealed class FileSystemFactory
 	{
+		#region resource name constants
+		private const string STR_CREATE_INSTANCE_NULL_FILE_ARG	= "FileSystemFactory.CreateInstance_Debug-NullEmptyFileStr";
+		private const string STR_CREATE_INSTANCE_NOT_FOUND_ERR	= "FileSystemFactory.CreateInstance_Error-NotFound";
+
+		#endregion
 		private FileSystemFactory(){}
 
 		/// <summary>
@@ -24,9 +30,9 @@ namespace WolfeReiter.AntiVirus
 			ILog log = LogManager.GetLogger(typeof(FileSystemFactory));
 			FileSystemInfo fileSystemInfo = null;
 
-			if(fileSystemItem==null || fileSystemItem==string.Empty)
+			if(fileSystemItem==null || fileSystemItem.Length==0)
 			{
-				log.Debug("FileSystemFactory.CreateInstance was passed a null or empty string constructor.");
+				log.Debug( ResourceManagers.Strings.GetString(STR_CREATE_INSTANCE_NULL_FILE_ARG) );
 				return null;
 			}
 			else
@@ -38,7 +44,7 @@ namespace WolfeReiter.AntiVirus
 						fileSystemInfo = new FileInfo( fileSystemItem );
 					if( fileSystemInfo.Exists)
                         return fileSystemInfo;
-					log.Error( string.Format( "{0} was not found.", fileSystemItem ) );
+					log.Error( string.Format( CultureInfo.CurrentCulture, ResourceManagers.Strings.GetString(STR_CREATE_INSTANCE_NOT_FOUND_ERR), fileSystemItem ) );
 					return null;
 				}
 				catch(Exception ex)

@@ -1,6 +1,9 @@
+using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-
+using System.Runtime.InteropServices;
+using System.Security;
+using System.Security.Permissions;
 //
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
@@ -14,6 +17,13 @@ using System.Runtime.CompilerServices;
 [assembly: AssemblyCopyright("(c)2004 WolfeReiter, LLC [http://www.wolfereiter.com]")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]			
+[assembly: ComVisible(false)]
+[assembly: CLSCompliant(true)]
+//No environmental variable access
+[assembly: EnvironmentPermission(SecurityAction.RequestRefuse)]
+//No registry permissions
+[assembly: RegistryPermission(SecurityAction.RequestRefuse)]
+[assembly: FileIOPermission(SecurityAction.RequestMinimum, Unrestricted=true)]
 
 //
 // Version information for an assembly consists of the following four values:
@@ -26,7 +36,7 @@ using System.Runtime.CompilerServices;
 // You can specify all the values or you can default the Revision and Build Numbers 
 // by using the '*' as shown below:
 
-[assembly: AssemblyVersion("0.1.*")]
+[assembly: AssemblyVersion("0.2.*")]
 
 //
 // In order to sign your assembly you must specify a key to use. Refer to the 

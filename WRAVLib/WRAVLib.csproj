@@ -8,15 +8,20 @@
       <References>
         <Reference Name="System" AssemblyName="System" HintPath="C:\WINDOWS\Microsoft.NET\Framework\v1.1.4322\System.dll" />
         <Reference Name="log4net" Project="{F6A02431-167E-4347-BC43-65532C31CDB7}" Package="{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}" />
+        <Reference Name="System.Data" AssemblyName="System.Data" HintPath="C:\WINDOWS\Microsoft.NET\Framework\v1.1.4322\System.Data.dll" />
+        <Reference Name="System.XML" AssemblyName="System.XML" HintPath="C:\WINDOWS\Microsoft.NET\Framework\v1.1.4322\System.XML.dll" />
       </References>
     </Build>
     <Files>
       <Include>
         <File RelPath="AssemblyInfo.cs" SubType="Code" BuildAction="Compile" />
+        <File RelPath="ByteScanArgs.cs" SubType="Code" BuildAction="Compile" />
         <File RelPath="ClamdStreamAgent.cs" SubType="Code" BuildAction="Compile" />
         <File RelPath="FileSystemFactory.cs" SubType="Code" BuildAction="Compile" />
-        <File RelPath="IVirScanAgent.cs" SubType="Code" BuildAction="Compile" />
-        <File RelPath="VirScanAgent.cs" SubType="Code" BuildAction="Compile" />
+        <File RelPath="IVirusScanAgent.cs" SubType="Code" BuildAction="Compile" />
+        <File RelPath="ResourceManagers.cs" SubType="Code" BuildAction="Compile" />
+        <File RelPath="Strings.resx" BuildAction="EmbeddedResource" />
+        <File RelPath="VirusScanAgent.cs" SubType="Code" BuildAction="Compile" />
       </Include>
     </Files>
   </CSHARP>

@@ -1,5 +1,6 @@
 using log4net;
 using System;
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Net;
@@ -11,18 +12,30 @@ using System.Threading;
 namespace WolfeReiter.AntiVirus
 {
 	/// <summary>
-	/// ClamdStreamAgent is a concrete VirScanAgent that is a client to the clamd daemon using the STREAM protocol.
+	/// ClamdStreamAgent is a concrete VirusScanAgent that is a client to the clamd daemon using the STREAM protocol.
 	/// </summary>
-	public class ClamdStreamAgent : VirScanAgent, IVirScanAgent
+	public class ClamdStreamAgent : VirusScanAgent, IVirusScanAgent
 	{
+		#region resource name constants
+		private const string STR_DO_BYTE_SCAN_ARG_EX				= "ClamdStreamAgent.DoByteScan_ArgumentException";
+		private const string STR_SCAN_NOT_SUPPORTED_EX_THREADING	= "ClamdStreamAgent.Scan_NotSupportedException-ThreadingModel";
+		private const string STR_SCAN_ERR_FILE_NOT_EXIST			= "ClamdStreamAgent.Scan_NotFileExists";
+		private const string STR_SCAN_ERR_DIR_NOT_EXIST				= "ClamdStreamAgent.Scan_NotDirectoryExists";
+		private const string STR_SCAN_FILESYSTEMINFO_NONT_SUPPORTED	= "ClamdStreamAgent.Scan_NotSupportedException-FileSystemInfo";
+		private const string STR_VERSION							= "ClamdStreamAgent.Version";
+		private const string STR_ITEM_SCAN_COMPLETED_HANDLER		= "ClamdStreamAgent.ItemScanCompletedHandler";
+		#endregion
+
 		private const string FOUND	   = "FOUND";
 		private const string SCAN_VERB = "STREAM";
 		private const string VER_VERB  = "VERSION";
+
 		private string	_host;
 		private int		_port;
-		private VirScanAgent.ThreadingModel	_threadModel;
+		private VirusScanAgent.ThreadingModel	_threadModel;
 		private ILog _logger;
 		private bool _verbose;
+
 
 		/// <summary>
 		/// Ctor. Synchronous or async agent. 
@@ -35,7 +48,7 @@ namespace WolfeReiter.AntiVirus
 		/// <param name="port">TCP port clamd listens on</param>
 		/// <param name="model">whether to queue each file to it's own thread for scanning</param>
 		/// <param name="verbose">whether to use verbose logging or only log errors and viruses</param>
-		public ClamdStreamAgent(string host, int port, VirScanAgent.ThreadingModel model, bool verbose )
+		public ClamdStreamAgent(string host, int port, VirusScanAgent.ThreadingModel model, bool verbose )
 		{
 			_logger = LogManager.GetLogger(this.GetType());
 			_host = host;
@@ -51,7 +64,7 @@ namespace WolfeReiter.AntiVirus
 		/// <param name="host">computer running clamd</param>
 		/// <param name="port">TCP port clamd listens on</param>
 		/// <param name="verbose">whether to use verbose logging or only log errors and viruses</param>
-		public ClamdStreamAgent(string host, int port, bool verbose) : this(host, port, VirScanAgent.ThreadingModel.SyncronousSingleThead, verbose){}
+		public ClamdStreamAgent(string host, int port, bool verbose) : this(host, port, VirusScanAgent.ThreadingModel.SynchronousSingleThread, verbose){}
 
 		/// <summary>
 		/// Sends a byte[] to a clamd port
@@ -83,33 +96,6 @@ namespace WolfeReiter.AntiVirus
 		}
 
 		/// <summary>
-		/// Inner class. Defines arguments for ByteScan and DoByteScan.
-		/// </summary>
-		protected class ByteScanArgs
-		{
-			private string _id;
-			private byte[] _buff;
-			/// <summary>
-			/// CTOR.
-			/// </summary>
-			/// <param name="id">Byte[] buffer.</param>
-			/// <param name="buff">Unique identifier for the buffer (eg. filename, url or database key, etc.)</param>
-			public ByteScanArgs(string id, byte[] buff)
-			{
-				_buff = buff;
-				_id	 = id;
-			}
-			/// <summary>
-			/// Get-only. Byte[] buffer.
-			/// </summary>
-			public byte[] Buff { get { return _buff; } }
-			/// <summary>
-			/// Get-only. Unique identifier for the buffer (eg. filename, url or database key, etc.)
-			/// </summary>
-			public string Id { get { return _id; } }
-		}
-
-		/// <summary>
 		/// WaitCallback method for performing a byte[] scan on an independent thread using System.Treading.QueueUserWorkItem.
 		/// </summary>
 		/// <exception cref="ArgumentException">Throws argument "o" is not an instance of ByteScanArgs.</exception>
@@ -117,9 +103,9 @@ namespace WolfeReiter.AntiVirus
 		protected virtual void DoByteScan(object o)
 		{
 			if( !(o is ByteScanArgs) )
-				throw new ArgumentException("DoByteScan requires a ClamdStreamAgent.ByteScanArgs object as its parameter");
+				throw new ArgumentException( ResourceManagers.Strings.GetString(STR_DO_BYTE_SCAN_ARG_EX) );
 
-			ByteScanArgs scanArgs = o as ByteScanArgs;
+			ByteScanArgs scanArgs = (ByteScanArgs)o;
 			ByteScan(scanArgs);
 		}
 
@@ -131,9 +117,6 @@ namespace WolfeReiter.AntiVirus
 		/// <param name="args">ByteScanArgs instance.</param>
 		protected virtual void ByteScan(ByteScanArgs args)
 		{
-			if( args==null )
-				throw new ArgumentNullException("args","Argument must not be null");
-
 			string outstr = null;
 			try
 			{
@@ -148,7 +131,7 @@ namespace WolfeReiter.AntiVirus
 					string portstr = inputStream.ReadLine();
 					string[] daemonargs = portstr.Split(' ');
 				
-					SendStream ( args.Buff, int.Parse (daemonargs[daemonargs.Length-1]) );
+					SendStream ( args.GetBuffer(), int.Parse (daemonargs[daemonargs.Length-1], CultureInfo.InvariantCulture ) );
 				
 					outstr = inputStream.ReadLine();
 
@@ -159,7 +142,7 @@ namespace WolfeReiter.AntiVirus
 				}
 
 				if(outstr!=null && outstr.IndexOf(FOUND)>-1)
-					this.OnVirusFound( new ScanCompletedArgs( args.Id, outstr ) );
+					this.OnVirusFound( new ScanCompletedEventArgs( args.Id, outstr ) );
 			}
 			catch(SocketException sex)
 			{
@@ -172,11 +155,11 @@ namespace WolfeReiter.AntiVirus
 			}
 			finally
 			{
-				this.OnItemScanCompleted( new ScanCompletedArgs( args.Id, outstr ) );
+				this.OnItemScanCompleted( new ScanCompletedEventArgs( args.Id, outstr ) );
 			}
 		}
 
-		#region IVirScanAgent Members
+		#region IVirusScanAgent Members
 
 		/// <summary>
 		/// Scan a byte[] bag.
@@ -188,15 +171,27 @@ namespace WolfeReiter.AntiVirus
 			ByteScanArgs args = new ByteScanArgs(id,buff);
 			switch(_threadModel)
 			{
-				case VirScanAgent.ThreadingModel.AsyncronousThreadPool :
+				case VirusScanAgent.ThreadingModel.AsynchronousThreadPool :
 					ThreadPool.QueueUserWorkItem( new WaitCallback( this.DoByteScan ), args );
 					break;
-				case VirScanAgent.ThreadingModel.SyncronousSingleThead :
+				case VirusScanAgent.ThreadingModel.SynchronousSingleThread :
 					ByteScan(args);			
 					break;
 				default :
-					throw new NotSupportedException( string.Format("The threading model, {0}, is not supported by  ClamdStreamAgent.",_threadModel) );
+					throw new NotSupportedException( string.Format(CultureInfo.CurrentCulture, ResourceManagers.Strings.GetString(STR_SCAN_NOT_SUPPORTED_EX_THREADING), _threadModel) );
 			}
+		}
+
+		/// <summary>
+		/// Scan a stream.
+		/// </summary>
+		/// <param name="id">Identifier for the stream</param>
+		/// <param name="stream">Stream to scan</param>
+		public override void Scan(string id, Stream stream)
+		{
+			byte[] buff = new byte[stream.Length];
+			stream.Read(buff,0,buff.Length);
+			Scan(id, buff);
 		}
 
 		/// <summary>
@@ -212,14 +207,12 @@ namespace WolfeReiter.AntiVirus
 				{
 					if(file.Exists)
 					{
-						inStream = file.OpenRead();
-						byte[] buff = new byte[inStream.Length];
-						inStream.Read(buff,0,buff.Length);
-						Scan(file.FullName, buff);		
+						using( Stream stream = file.OpenRead() )
+							Scan(file.FullName, file.OpenRead());		
 					}
 					else
 					{
-						this.OnItemScanCompleted( new ScanCompletedArgs( file.FullName, "ERROR: The file does not exist." ) );
+						this.OnItemScanCompleted( new ScanCompletedEventArgs( file.FullName, ResourceManagers.Strings.GetString(STR_SCAN_ERR_FILE_NOT_EXIST) ) );
 					}
 				}
 				catch(Exception ex)
@@ -229,7 +222,10 @@ namespace WolfeReiter.AntiVirus
 					else if(_logger.IsDebugEnabled)
 						_logger.Debug(ex);
 					else
+					{
 						_logger.Error(ex.Message);
+						throw;
+					}
 				}
 				finally
 				{
@@ -261,11 +257,14 @@ namespace WolfeReiter.AntiVirus
 						else if(_logger.IsDebugEnabled)
 							_logger.Debug(ex);
 						else
+						{
 							_logger.Error(ex.Message);
+							throw;
+						}
 					}
 				}
 				else
-					this.OnItemScanCompleted( new ScanCompletedArgs( dir.FullName, "ERROR: The directory does not exist." ) );
+					this.OnItemScanCompleted( new ScanCompletedEventArgs( dir.FullName, ResourceManagers.Strings.GetString(STR_SCAN_ERR_DIR_NOT_EXIST) ) );
 			}
 		}
 
@@ -299,7 +298,10 @@ namespace WolfeReiter.AntiVirus
 								else if(_logger.IsDebugEnabled)
 									_logger.Debug(ex);
 								else
+								{
 									_logger.Error(ex.Message);
+									throw;
+								}
 							}
 							Scan( subdir, recurse );
 						}
@@ -311,7 +313,10 @@ namespace WolfeReiter.AntiVirus
 						else if(_logger.IsDebugEnabled)
 							_logger.Debug(ex);
 						else
+						{
 							_logger.Error(ex.Message);
+							throw;
+						}
 					}
 				}
 			}
@@ -331,7 +336,7 @@ namespace WolfeReiter.AntiVirus
 				else if (file is DirectoryInfo)
 					Scan(file as DirectoryInfo, recurse);
 				else
-					throw new NotSupportedException( string.Format( "{0} is not a supported type of FileSystemInfo. Use FileInfo or DirectoryInfo.",file.GetType() ) );
+					throw new NotSupportedException( string.Format(  CultureInfo.CurrentCulture, ResourceManagers.Strings.GetString(STR_SCAN_FILESYSTEMINFO_NONT_SUPPORTED), file.GetType() ) );
 			}
 		}
 
@@ -381,7 +386,7 @@ namespace WolfeReiter.AntiVirus
 		{
 			get
 			{
-				return string.Format("{0}\nScan Engine: {1}", AgentVersion, ClamdVersion);
+				return string.Format(CultureInfo.CurrentCulture, ResourceManagers.Strings.GetString(STR_VERSION), AgentVersion, ClamdVersion);
 			}
 			
 		}
@@ -390,11 +395,12 @@ namespace WolfeReiter.AntiVirus
 		/// Handler for the ItemScanCompleted event. Overrides base behavior to implement verbose vs. non-verbose
 		/// logging behavior.
 		/// </summary>
+		/// <param name="sender"></param>
 		/// <param name="e"></param>
-		protected override void ItemScanCompletedHandler( ScanCompletedArgs e )
+		protected override void ItemScanCompletedHandler( object sender, ScanCompletedEventArgs e )
 		{
 			if( _verbose || _logger.IsDebugEnabled || e.Result.IndexOf(FOUND)>-1 )
-				_logger.Info( string.Format( "SCANNED {0} RESULT {1}", e.Item, e.Result ) );
+				_logger.Info( string.Format( CultureInfo.CurrentCulture, ResourceManagers.Strings.GetString(STR_ITEM_SCAN_COMPLETED_HANDLER), e.Item, e.Result ) );
 		}
 
 		#endregion
