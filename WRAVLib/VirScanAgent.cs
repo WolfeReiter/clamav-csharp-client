@@ -113,30 +113,4 @@ namespace WolfeReiter.AntiVirus
 			,AsyncronousThreadPool
 		}
 	}
-
-	#region ScanCompleted delegate
-	/// <summary>
-	/// Delegate prototype to be called when a scan is completed.
-	/// </summary>
-	public delegate void ScanCompleted( ScanCompletedArgs e );
-	/// <summary>
-	/// Delegate prototype to be called when a virus is found.
-	/// </summary>
-	public delegate void VirusFound( ScanCompletedArgs e);
-	/// <summary>
-	/// Arguments passed to the ScanCompleted and VirusFound delegates.
-	/// </summary>
-	public class ScanCompletedArgs
-	{
-		private string _item, _result;
-		public ScanCompletedArgs(string item, string result)
-		{
-			_item = item;
-			_result = result;
-		}
-		public string Item { get { return _item; } }
-		
-		public string Result { get { return _result; } }
-	}
-	#endregion
 }
