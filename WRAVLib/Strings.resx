@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<root>
+	<xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+		<xsd:element name="root" msdata:IsDataSet="true">
+			<xsd:complexType>
+				<xsd:choice maxOccurs="unbounded">
+					<xsd:element name="data">
+						<xsd:complexType>
+							<xsd:sequence>
+								<xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+								<xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+							</xsd:sequence>
+							<xsd:attribute name="name" type="xsd:string" />
+							<xsd:attribute name="type" type="xsd:string" />
+							<xsd:attribute name="mimetype" type="xsd:string" />
+						</xsd:complexType>
+					</xsd:element>
+					<xsd:element name="resheader">
+						<xsd:complexType>
+							<xsd:sequence>
+								<xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+							</xsd:sequence>
+							<xsd:attribute name="name" type="xsd:string" use="required" />
+						</xsd:complexType>
+					</xsd:element>
+				</xsd:choice>
+			</xsd:complexType>
+		</xsd:element>
+	</xsd:schema>
+	<resheader name="ResMimeType">
+		<value>text/microsoft-resx</value>
+	</resheader>
+	<resheader name="Version">
+		<value>1.0.0.0</value>
+	</resheader>
+	<resheader name="Reader">
+		<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=1.0.5000.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+	</resheader>
+	<resheader name="Writer">
+		<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=1.0.5000.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+	</resheader>
+	<data name="ByteScanArgs.ID_NULL">
+		<value>The id may not be null</value>
+	</data>
+	<data name="ClamdStreamAgent.DoByteScan_ArgumentException">
+		<value>DoByteScan requires a ByteScanArgs object as its parameter</value>
+	</data>
+	<data name="ClamdStreamAgent.Scan_NotSupportedException-ThreadingModel">
+		<value>The threading model, {0}, is not supported by  ClamdStreamAgent.</value>
+	</data>
+	<data name="ClamdStreamAgent.Scan_NotFileExists">
+		<value>ERROR: The file does not exist.</value>
+	</data>
+	<data name="ClamdStreamAgent.Scan_NotDirectoryExists">
+		<value>ERROR: The directory does not exist.</value>
+	</data>
+	<data name="ClamdStreamAgent.Scan_NotSupportedException-FileSystemInfo">
+		<value>{0} is not a supported type of FileSystemInfo. Use FileInfo or DirectoryInfo.</value>
+	</data>
+	<data name="ClamdStreamAgent.Version">
+		<value>{0}
+Scan Engine: {1}</value>
+	</data>
+	<data name="ClamdStreamAgent.ItemScanCompletedHandler">
+		<value>SCANNED {0} RESULT {1}</value>
+	</data>
+	<data name="FileSystemFactory.CreateInstance_Debug-NullEmptyFileStr">
+		<value>FileSystemFactory.CreateInstance was passed a null or empty string argument.</value>
+	</data>
+	<data name="FileSystemFactory.CreateInstance_Error-NotFound">
+		<value>{0} was not found.</value>
+	</data>
+	<data name="VirusScanAgent.AgentVersion">
+		<value>{0} version {1}
+{2}
+{3}</value>
+	</data>
+	<data name="VirusScanAgent.ItemScanCompletedHandler">
+		<value>SCANNED {0}RESULT {1}</value>
+	</data>
+</root>
