@@ -29,12 +29,17 @@ namespace WolfeReiter.AntiVirus
 		private const string FOUND	   = "FOUND";
 		private const string SCAN_VERB = "STREAM";
 		private const string VER_VERB  = "VERSION";
-
+		
+		private const int	 MAX_NET_RETRY = 5;
+		private static int   _netRetryCount = 0;
+		
 		private string	_host;
 		private int		_port;
 		private VirusScanAgent.ThreadingModel	_threadModel;
 		private ILog _logger;
 		private bool _verbose;
+
+		
 
 
 		/// <summary>
@@ -69,41 +74,29 @@ namespace WolfeReiter.AntiVirus
 		/// <summary>
 		/// Sends a byte[] to a clamd port.
 		/// </summary>
+		/// <exception cref="SocketException">Throws if the socket is not available.</exception>
+		/// <exception cref="IOException">Throws if there is an error writing to the socket.</exception>
 		/// <param name="stream">Stream to scan</param>
 		/// <param name="streamPort">TCP port to send buffer for scanning</param>
 		protected void SendStream(Stream stream, int streamPort)
 		{
 			const int TCP_CHUNK = 1460;
 			byte[] buff = new byte[TCP_CHUNK];
-			try
-			{
-				using ( TcpClient tcpclient = new TcpClient( this.ClamdHost, streamPort ) )
-				using ( NetworkStream netstream = tcpclient.GetStream() )
-				{	
-					for( stream.Position=0; stream.Position < stream.Length; stream.Position+=TCP_CHUNK)
-					{
-						if( (stream.Length - stream.Position) < TCP_CHUNK)
-							buff = new byte[Convert.ToInt32( stream.Length-stream.Position )];
-							
-						stream.Read( buff, 0, buff.Length );
-						netstream.Write( buff, 0, buff.Length );
-						netstream.Flush();
-					}
-					netstream.Close();
-					tcpclient.Close();
-				}
-			}
-			catch(Exception ex)
-			{
-				if(ex is SocketException || ex is IOException)
+
+			using ( TcpClient tcpclient = new TcpClient( this.ClamdHost, streamPort ) )
+			using ( NetworkStream netstream = tcpclient.GetStream() )
+			{	
+				for( stream.Position=0; stream.Position < stream.Length; stream.Position+=TCP_CHUNK)
 				{
-					if(_logger.IsDebugEnabled)
-						_logger.Error(ex);
-					else
-						_logger.Error(ex.Message);
+					if( (stream.Length - stream.Position) < TCP_CHUNK)
+						buff = new byte[Convert.ToInt32( stream.Length-stream.Position )];
+						
+					stream.Read( buff, 0, buff.Length );
+					netstream.Write( buff, 0, buff.Length );
+					netstream.Flush();
 				}
-				else
-					throw;
+				netstream.Close();
+				tcpclient.Close();
 			}
 		}
 
@@ -157,15 +150,28 @@ namespace WolfeReiter.AntiVirus
 					this.OnVirusFound( new ScanCompletedEventArgs( args.Id, outstr ) );
 				
 				this.OnItemScanCompleted( new ScanCompletedEventArgs( args.Id, outstr ) );
+				//reset retry counter
+				_netRetryCount = 0;
 			}
 			catch(Exception ex)
 			{
 				if(ex is SocketException || ex is IOException)
 				{
-					if(_logger.IsDebugEnabled)
-						_logger.Error(ex);
+					if (_netRetryCount < MAX_NET_RETRY)
+					{
+						//increment retry count and try again
+						_netRetryCount++;
+						StreamScan( args );
+					}
 					else
-						_logger.Error(ex.Message);
+					{
+						//reset retry count log error and return
+						_netRetryCount = 0;
+						if(_logger.IsDebugEnabled)
+							_logger.Error(ex);
+						else
+							_logger.Error(ex.Message);
+					}
 				}
 				else
 					throw;
@@ -220,7 +226,7 @@ namespace WolfeReiter.AntiVirus
 				}
 				catch(Exception ex)
 				{
-					if( (ex is UnauthorizedAccessException || ex is SecurityException || ex is FileLoadException) )
+					if( (ex is UnauthorizedAccessException || ex is SecurityException || ex is FileLoadException || ex is IOException) )
 						_logger.Error(ex.Message);	
 					else if(_logger.IsDebugEnabled)
 						_logger.Error(ex);
@@ -290,7 +296,7 @@ namespace WolfeReiter.AntiVirus
 							}
 							catch(Exception ex)
 							{
-								if( ex is UnauthorizedAccessException || ex is SecurityException || ex is FileLoadException )
+								if( ex is UnauthorizedAccessException || ex is SecurityException )
 									_logger.Error(ex.Message);	
 								else if(_logger.IsDebugEnabled)
 									_logger.Error(ex);
