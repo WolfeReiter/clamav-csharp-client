@@ -67,31 +67,36 @@ namespace WolfeReiter.AntiVirus
 		public ClamdStreamAgent(string host, int port, bool verbose) : this(host, port, VirusScanAgent.ThreadingModel.SynchronousSingleThread, verbose){}
 
 		/// <summary>
-		/// Sends a byte[] to a clamd port
+		/// Sends a byte[] to a clamd port.
 		/// </summary>
 		/// <param name="buff">byte[] to scan</param>
 		/// <param name="streamPort">TCP port to send buffer for scanning</param>
 		protected void SendStream(byte[] buff, int streamPort)
 		{
+			const int TCP_CHUNK = 1460;
 			try
 			{
 				using ( TcpClient tcpclient = new TcpClient( this.ClamdHost, streamPort ) )
 				using ( NetworkStream netstream = tcpclient.GetStream() )
-				using ( BinaryWriter writer = new BinaryWriter( netstream, Encoding.ASCII ) )
 				{	
-					writer.Write( buff );
-					writer.Flush();
-					writer.Close();
+					for( int i=0; i<buff.Length; i+=TCP_CHUNK )
+					{
+						if( (buff.Length - i) >= TCP_CHUNK)
+                            netstream.Write( buff, i, TCP_CHUNK );
+						else
+							netstream.Write( buff, i, buff.Length-i );
+						netstream.Flush();
+					}
 					netstream.Close();
 					tcpclient.Close();
 				}
 			}
-			catch(SocketException sex)
+			catch(SocketException ex)
 			{
 				if(_logger.IsDebugEnabled)
-					_logger.Error(sex);
+					_logger.Error(ex);
 				else
-					_logger.Error(sex.Message);
+					_logger.Error(ex.Message);
 			}
 		}
 
@@ -144,19 +149,16 @@ namespace WolfeReiter.AntiVirus
 				if(outstr!=null && outstr.IndexOf(FOUND)>-1)
 					this.OnVirusFound( new ScanCompletedEventArgs( args.Id, outstr ) );
 			}
-			catch(SocketException sex)
+			catch(SocketException ex)
 			{
 				if(_logger.IsDebugEnabled)
-					_logger.Error(sex);
+					_logger.Error(ex);
 				else
-					_logger.Error(sex.Message);
+					_logger.Error(ex.Message);
 
-				outstr = sex.Message;
+				outstr = ex.Message;
 			}
-			finally
-			{
-				this.OnItemScanCompleted( new ScanCompletedEventArgs( args.Id, outstr ) );
-			}
+			this.OnItemScanCompleted( new ScanCompletedEventArgs( args.Id, outstr ) );
 		}
 
 		#region IVirusScanAgent Members
