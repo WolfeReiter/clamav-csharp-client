@@ -17,7 +17,6 @@
       <Include>
         <File RelPath="App.ico" BuildAction="Content" />
         <File RelPath="AssemblyInfo.cs" SubType="Code" BuildAction="Compile" />
-        <File RelPath="nunit.framework.dll" BuildAction="Content" />
         <File RelPath="ScanArgs.cs" SubType="Code" BuildAction="Compile" />
         <File RelPath="ScanJob.cs" SubType="Code" BuildAction="Compile" />
         <File RelPath="WRVirScan.cs" SubType="Code" BuildAction="Compile" />
