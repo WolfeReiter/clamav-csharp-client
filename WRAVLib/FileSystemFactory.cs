@@ -38,6 +38,7 @@ namespace WolfeReiter.AntiVirus
 						fileSystemInfo = new FileInfo( fileSystemItem );
 					if( fileSystemInfo.Exists)
                         return fileSystemInfo;
+					log.Error( string.Format( "{0} was not found.", fileSystemItem ) );
 					return null;
 				}
 				catch(Exception ex)
