@@ -236,7 +236,7 @@ namespace WolfeReiter.AntiVirus
 				}
 				catch(Exception ex)
 				{
-					if( (ex is SecurityException || ex is FileLoadException) )
+					if( (ex is UnauthorizedAccessException || ex is SecurityException || ex is FileLoadException) )
 						_logger.Info(ex.Message);	
 					else if(_logger.IsDebugEnabled)
 						_logger.Debug(ex);
@@ -271,7 +271,7 @@ namespace WolfeReiter.AntiVirus
 					}
 					catch(Exception ex)
 					{
-						if( (ex is SecurityException || ex is FileLoadException) )
+						if( ex is UnauthorizedAccessException || ex is SecurityException || ex is FileLoadException )
 							_logger.Info(ex.Message);	
 						else if(_logger.IsDebugEnabled)
 							_logger.Debug(ex);
@@ -312,7 +312,7 @@ namespace WolfeReiter.AntiVirus
 							}
 							catch(Exception ex)
 							{
-								if( (ex is SecurityException || ex is FileLoadException) )
+								if( ex is UnauthorizedAccessException || ex is SecurityException || ex is FileLoadException )
 									_logger.Info(ex.Message);	
 								else if(_logger.IsDebugEnabled)
 									_logger.Debug(ex);
@@ -327,7 +327,7 @@ namespace WolfeReiter.AntiVirus
 					}
 					catch (Exception ex)
 					{
-						if( ex is SecurityException )
+						if( ex is UnauthorizedAccessException || ex is SecurityException )
 							_logger.Info(ex.Message);	
 						else if(_logger.IsDebugEnabled)
 							_logger.Debug(ex);
