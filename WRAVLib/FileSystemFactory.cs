@@ -49,13 +49,16 @@ namespace WolfeReiter.AntiVirus
 				}
 				catch(Exception ex)
 				{
-					if(log.IsDebugEnabled)
-						log.Error(ex);
-					else
-						log.Error(ex.Message);
 					//AgumentException, PathTooLongExcpetion and SecurityException are expected and shouldn't kill the application.
 					if( ex is ArgumentException || ex is PathTooLongException || ex is SecurityException )
+					{
+						if(log.IsDebugEnabled)
+							log.Error(ex);
+						else
+							log.Error(ex.Message);
+						
 						return null;
+					}
 					//anything else is truly catastrophic.
 					throw ex;
 				}

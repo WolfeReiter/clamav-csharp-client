@@ -211,7 +211,6 @@ namespace WolfeReiter.AntiVirus
 		{
 			if( file != null )
 			{
-				FileStream inStream = null;
 				try
 				{
 					if(file.Exists)
@@ -232,11 +231,6 @@ namespace WolfeReiter.AntiVirus
 						_logger.Error(ex);
 					else
 						throw;
-				}
-				finally
-				{
-					if(inStream!=null)
-						inStream.Close();
 				}
 			}
 		}
