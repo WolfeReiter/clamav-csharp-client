@@ -1,3 +1,25 @@
+/*
+** Copyright (c) 2004 Brian A. Reiter <breiter@wolfereiter.com> and WolfeReiter, LLC
+**
+** This software is provided 'as-is', without any express or implied warranty. In no 
+** event will the authors be held liable for any damages arising from the use of 
+** this software.
+**
+** Permission is granted to anyone to use this software for any purpose, including 
+** commercial applications, and to alter it and redistribute it freely, subject to 
+** the following restrictions:
+**
+**    1. The origin of this software must not be misrepresented; you must not claim 
+**       that you wrote the original software. If you use this software in a product,
+**       an acknowledgment in the product documentation would be appreciated but is 
+**       not required.
+**
+**    2. Altered source versions must be plainly marked as such, and must not be 
+**       misrepresented as being the original software.
+**
+**    3. This notice may not be removed or altered from any source distribution.
+*/
+
 using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -15,7 +37,7 @@ using System.Security.Permissions;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("WolfeReiter, LLC [http://www.wolfereiter.com]")]
 [assembly: AssemblyProduct("WolfeReiter VirScan")]
-[assembly: AssemblyCopyright("(c)2004 WolfeReiter, LLC [http://www.wolfereiter.com]")]
+[assembly: AssemblyCopyright("(c)2004 Brian A. Reiter and WolfeReiter, LLC [http://www.wolfereiter.com]")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]		
 [assembly: ComVisible(false)]
@@ -64,6 +86,7 @@ using System.Security.Permissions;
 //   (*) Delay Signing is an advanced option - see the Microsoft .NET Framework
 //       documentation for more information on this.
 //
+#if STRONG
 [assembly: AssemblyDelaySign(false)]
-[assembly: AssemblyKeyFile("")]
-[assembly: AssemblyKeyName("")]
+[assembly: AssemblyKeyFile(@"C:\Program Files\WolfeReiter\WolfeReiter.snk")]
+#endif

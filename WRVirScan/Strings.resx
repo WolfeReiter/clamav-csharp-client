@@ -61,7 +61,7 @@ switches:
 	{0} or {1}		show help
 	{2} or {3}		show version info
 	{4} or {5}		be verbose
-	{6} or {7}		recurse
+	{6} or {7}		recurs
 	{8} or {9}	host ex: {8} {10}
 	(default host is {10}) 
 	{11} or {12}		tcp port ex: {11} {13}
