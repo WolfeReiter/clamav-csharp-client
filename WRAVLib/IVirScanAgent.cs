@@ -46,6 +46,13 @@ namespace WolfeReiter.AntiVirus
 		/// </summary>
 		string Version {get;}
 
+		/// <summary>
+		/// Event to be fired when an item has been scanned.
+		/// </summary>
 		event ScanCompleted ItemScanCompleted;
+		/// <summary>
+		/// Event to be fired when a virus is found.
+		/// </summary>
+		event VirusFound VirusFound;
 	}
 }

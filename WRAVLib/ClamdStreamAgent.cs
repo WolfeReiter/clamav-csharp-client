@@ -1,3 +1,4 @@
+using log4net;
 using System;
 using System.IO;
 using System.Reflection;
@@ -13,11 +14,15 @@ namespace WolfeReiter.AntiVirus
 	/// </summary>
 	public class ClamdStreamAgent : VirScanAgent, IVirScanAgent
 	{
+		private const string FOUND	   = "FOUND";
 		private const string SCAN_VERB = "STREAM";
 		private const string VER_VERB  = "VERSION";
 		private string	_host;
 		private int		_port;
 		private VirScanAgent.ThreadingModel	_threadModel;
+		private ILog _logger;
+		private bool _verbose;
+
 		/// <summary>
 		/// Ctor. Synchronous or async agent. 
 		/// </summary>
@@ -28,58 +33,106 @@ namespace WolfeReiter.AntiVirus
 		/// <param name="host">computer running clamd</param>
 		/// <param name="port">TCP port clamd listens on</param>
 		/// <param name="model">whether to queue each file to it's own thread for scanning</param>
-		public ClamdStreamAgent(string host, int port, VirScanAgent.ThreadingModel model)
+		/// <param name="verbose">whether to use verbose logging or only log errors and viruses</param>
+		public ClamdStreamAgent(string host, int port, VirScanAgent.ThreadingModel model, bool verbose )
 		{
+			_logger = LogManager.GetLogger(this.GetType());
 			_host = host;
 			_port = port;
 			_threadModel = model;
+			_verbose = verbose;
 		}
+
 		/// <summary>
 		/// Ctor. Constructs a syncronous scanning agent. This is best for console applications or single file scanning
 		/// such as during an upload/download.
 		/// </summary>
 		/// <param name="host">computer running clamd</param>
 		/// <param name="port">TCP port clamd listens on</param>
-		public ClamdStreamAgent(string host, int port) : this(host, port, VirScanAgent.ThreadingModel.SyncronousSingleThead){}
+		/// <param name="verbose">whether to use verbose logging or only log errors and viruses</param>
+		public ClamdStreamAgent(string host, int port, bool verbose) : this(host, port, VirScanAgent.ThreadingModel.SyncronousSingleThead, verbose){}
 
+		/// <summary>
+		/// Sends a byte[] to a clamd port
+		/// </summary>
+		/// <param name="buff">byte[] to scan</param>
+		/// <param name="streamPort">TCP port to send buffer for scanning</param>
 		protected void SendStream(byte[] buff, int streamPort)
 		{
-			using ( TcpClient tcpclient = new TcpClient(this.ClamdHost, streamPort ) )
-			using ( NetworkStream netstream = tcpclient.GetStream() )
-			using ( BinaryWriter writer = new BinaryWriter( netstream, Encoding.ASCII) )
-			{	
-				writer.Write( buff );
-				writer.Flush();
-				writer.Close();
-				netstream.Close();
-				tcpclient.Close();
+			try
+			{
+				using ( TcpClient tcpclient = new TcpClient( this.ClamdHost, streamPort ) )
+				using ( NetworkStream netstream = tcpclient.GetStream() )
+				using ( BinaryWriter writer = new BinaryWriter( netstream, Encoding.ASCII ) )
+				{	
+					writer.Write( buff );
+					writer.Flush();
+					writer.Close();
+					netstream.Close();
+					tcpclient.Close();
+				}
+			}
+			catch(SocketException sex)
+			{
+				if(_logger.IsDebugEnabled)
+					_logger.Error(sex);
+				else
+					_logger.Error(sex.Message);
 			}
 		}
 
+		/// <summary>
+		/// Inner class. Defines arguments for ByteScan and DoByteScan.
+		/// </summary>
 		protected class ByteScanArgs
 		{
 			private string _id;
 			private byte[] _buff;
+			/// <summary>
+			/// CTOR.
+			/// </summary>
+			/// <param name="id">Byte[] buffer.</param>
+			/// <param name="buff">Unique identifier for the buffer (eg. filename, url or database key, etc.)</param>
 			public ByteScanArgs(string id, byte[] buff)
 			{
 				_buff = buff;
 				_id	 = id;
 			}
+			/// <summary>
+			/// Get-only. Byte[] buffer.
+			/// </summary>
 			public byte[] Buff { get { return _buff; } }
+			/// <summary>
+			/// Get-only. Unique identifier for the buffer (eg. filename, url or database key, etc.)
+			/// </summary>
 			public string Id { get { return _id; } }
 		}
 
+		/// <summary>
+		/// WaitCallback method for performing a byte[] scan on an independent thread using System.Treading.QueueUserWorkItem.
+		/// </summary>
+		/// <exception cref="ArgumentException">Throws argument "o" is not an instance of ByteScanArgs.</exception>
+		/// <param name="o">Instance of ByteScanArgs.</param>
 		protected virtual void DoByteScan(object o)
 		{
 			if( !(o is ByteScanArgs) )
-				throw new ArgumentException("DoByteScan requires a ClamdStreamAgent.ByteScanArgs struct as its parameter");
+				throw new ArgumentException("DoByteScan requires a ClamdStreamAgent.ByteScanArgs object as its parameter");
 
 			ByteScanArgs scanArgs = o as ByteScanArgs;
 			ByteScan(scanArgs);
 		}
 
+		/// <summary>
+		/// Method scans a byte[] by passing it to clamd over a dynamically allocated port. The real magic happens here. 
+		/// The ItemScanCompleted event is raised whenever this method completes. If a virus is found, this method raises
+		/// the VirusFound event.
+		/// </summary>
+		/// <param name="args">ByteScanArgs instance.</param>
 		protected virtual void ByteScan(ByteScanArgs args)
 		{
+			if( args==null )
+				throw new ArgumentNullException("args","Argument must not be null");
+
 			string outstr = null;
 			try
 			{
@@ -103,10 +156,17 @@ namespace WolfeReiter.AntiVirus
 					netStream.Close();
 					tcpclient.Close();
 				}
+
+				if(outstr!=null && outstr.IndexOf(FOUND)>-1)
+					this.OnVirusFound( new ScanCompletedArgs( args.Id, outstr ) );
 			}
 			catch(SocketException sex)
 			{
-				//TDOD: log4net here
+				if(_logger.IsDebugEnabled)
+					_logger.Error(sex);
+				else
+					_logger.Error(sex.Message);
+
 				outstr = sex.Message;
 			}
 			finally
@@ -117,6 +177,11 @@ namespace WolfeReiter.AntiVirus
 
 		#region IVirScanAgent Members
 
+		/// <summary>
+		/// Scan a byte[] bag.
+		/// </summary>
+		/// <param name="id">Unique identifier for the buffer (eg. filename, url or database key, etc.)</param>
+		/// <param name="buff">byte[] bag to scan</param>
 		public override void Scan(string id, byte[] buff)
 		{
 			ByteScanArgs args = new ByteScanArgs(id,buff);
@@ -133,6 +198,10 @@ namespace WolfeReiter.AntiVirus
 			}
 		}
 
+		/// <summary>
+		/// Scan a file.
+		/// </summary>
+		/// <param name="file">File to scan.</param>
 		public override void Scan(FileInfo file)
 		{
 			FileStream inStream = null;
@@ -150,6 +219,15 @@ namespace WolfeReiter.AntiVirus
 					this.OnItemScanCompleted( new ScanCompletedArgs( file.FullName, "ERROR: The file does not exist." ) );
 				}
 			}
+			catch(Exception ex)
+			{
+				if( (ex is UnauthorizedAccessException || ex is FileLoadException) )
+					_logger.Info(ex.Message);	
+				else if(_logger.IsDebugEnabled)
+					_logger.Debug(ex);
+				else
+					_logger.Error(ex.Message);
+			}
 			finally
 			{
 				if(inStream!=null)
@@ -157,33 +235,83 @@ namespace WolfeReiter.AntiVirus
 			}
 		}
 
+		/// <summary>
+		/// Scan a directory non-recursively.
+		/// </summary>
+		/// <param name="dir">Directory to scan.</param>
 		public override void Scan(DirectoryInfo dir)
 		{
 			if( dir.Exists )
 			{
-				foreach( FileInfo file in dir.GetFiles() )
-					Scan( file );
+				try
+				{
+					foreach( FileInfo file in dir.GetFiles() )
+						Scan( file );
+				}
+				catch(Exception ex)
+				{
+					if( (ex is UnauthorizedAccessException || ex is FileLoadException) )
+						_logger.Info(ex.Message);	
+					else if(_logger.IsDebugEnabled)
+						_logger.Debug(ex);
+					else
+						_logger.Error(ex.Message);
+				}
 			}
 			else
 				this.OnItemScanCompleted( new ScanCompletedArgs( dir.FullName, "ERROR: The directory does not exist." ) );
 		}
 
+		/// <summary>
+		/// Scan a directory with optional recursion.
+		/// </summary>
+		/// <param name="dir">Directory to scan</param>
+		/// <param name="recurse">Recurse when true.</param>
 		public override void Scan(DirectoryInfo dir, bool recurse)
 		{
 			Scan ( dir );
 			if(recurse)
-			{			
-				foreach( DirectoryInfo subdir in dir.GetDirectories() )
+			{		
+				try
 				{
-					foreach( FileInfo file in subdir.GetFiles() )
+					foreach( DirectoryInfo subdir in dir.GetDirectories() )
 					{
-						Scan( file );
+						try
+						{
+							foreach( FileInfo file in subdir.GetFiles() )
+							{
+								Scan( file );
+							}
+						}
+						catch(Exception ex)
+						{
+							if( (ex is UnauthorizedAccessException || ex is FileLoadException) )
+								_logger.Info(ex.Message);	
+							else if(_logger.IsDebugEnabled)
+								_logger.Debug(ex);
+							else
+								_logger.Error(ex.Message);
+						}
+						Scan( subdir, recurse );
 					}
-					Scan( subdir, recurse );
+				}
+				catch (Exception ex)
+				{
+					if( ex is System.UnauthorizedAccessException )
+						_logger.Info(ex.Message);	
+					else if(_logger.IsDebugEnabled)
+						_logger.Debug(ex);
+					else
+						_logger.Error(ex.Message);
 				}
 			}
 		}
 
+		/// <summary>
+		/// Scan a FileSystem object (file or directory) with optional recursion.
+		/// </summary>
+		/// <param name="file">FileSystem object to scan</param>
+		/// <param name="recurse">Recurse when true if FileSystem object is a directory. Otherwise this argument is ignored..</param>
 		public override void Scan(FileSystemInfo file, bool recurse)
 		{
 			if(file is FileInfo)
@@ -194,6 +322,9 @@ namespace WolfeReiter.AntiVirus
 				throw new NotSupportedException( string.Format( "{0} is not a supported type of FileSystemInfo. Use FileInfo or DirectoryInfo.",file.GetType() ) );
 		}
 
+		/// <summary>
+		/// Get-only. Queries the clamd daemon for its version information.
+		/// </summary>
 		public string ClamdVersion
 		{
 			get
@@ -219,24 +350,38 @@ namespace WolfeReiter.AntiVirus
 				}
 				catch(SocketException sex)
 				{
-					//TODO: log4net here
+					if(_logger.IsDebugEnabled)
+						_logger.Error(sex);
+					else
+						_logger.Error(sex.Message);
+
 					portstr = sex.Message;
 				}
 				return portstr;
-				
 			}
 		}
 
 		/// <summary>
 		/// Returns the version of WRAVLib and the scan engine.
 		/// </summary>
-		public  string Version
+		public override string Version
 		{
 			get
 			{
 				return string.Format("{0}\nScan Engine: {1}", AgentVersion, ClamdVersion);
 			}
 			
+		}
+		
+		/// <summary>
+		/// Handler for the ItemScanCompleted event. Overrides base behavior to implement verbose vs. non-verbose
+		/// logging behavior.
+		/// </summary>
+		/// <param name="e"></param>
+		protected override void ItemScanCompletedHandler( ScanCompletedArgs e )
+		{
+			if(_verbose || e.Result.IndexOf(FOUND)>-1 )
+				_logger.Info( string.Format( "SCANNED {0} RESULT {1}", e.Item, e.Result ) );
 		}
 
 		#endregion

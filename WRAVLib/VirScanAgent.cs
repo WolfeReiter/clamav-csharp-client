@@ -1,3 +1,4 @@
+using log4net;
 using System;
 using System.Collections;
 using System.IO;
@@ -10,9 +11,15 @@ namespace WolfeReiter.AntiVirus
 	/// </summary>
 	public abstract class VirScanAgent : IVirScanAgent
 	{
+		private ILog _logger;
 
+		/// <summary>
+		/// Defalut Ctor. Creates an ILog instance and registers a default ItemScanCompeted handler.
+		/// </summary>
 		protected VirScanAgent()
 		{
+			_logger = LogManager.GetLogger(this.GetType());
+
 			this.ItemScanCompleted += new ScanCompleted(ItemScanCompletedHandler);
 		}
 
@@ -38,6 +45,9 @@ namespace WolfeReiter.AntiVirus
 
 		#endregion
 		
+		/// <summary>
+		/// Return the version of the VirScanAgent class implementation.
+		/// </summary>
 		public string AgentVersion
 		{
 			get
@@ -60,7 +70,20 @@ namespace WolfeReiter.AntiVirus
 				return string.Format("{0} version {1} \n{2}\n{3}", title, version, descr, copyright);
 			}
 		}
-
+		/// <summary>
+		/// Event occurs when a virus is found.
+		/// </summary>
+		public event VirusFound VirusFound;
+		/// <summary>
+		/// Raises the VirusFound event.
+		/// </summary>
+		/// <param name="e"></param>
+		protected void OnVirusFound( ScanCompletedArgs e )
+		{
+			VirusFound found = this.VirusFound;
+			if(found!=null)
+				found( e );
+		}
 		/// <summary>
 		/// Event occurs when an item has been scanned and a result is available.
 		/// </summary>
@@ -75,23 +98,34 @@ namespace WolfeReiter.AntiVirus
 			if(completed!=null)
 				completed( e );
 		}
-        protected virtual void ItemScanCompletedHandler( ScanCompletedArgs e )
+		protected virtual void ItemScanCompletedHandler( ScanCompletedArgs e )
 		{
-			//TODO: Put Log4Net here instead.
-			Console.SetOut( Console.Error );
-			Console.WriteLine( string.Format( "SCANNED {0}\nRESULT {1}", e.Item, e.Result ) );
+			_logger.Info( string.Format( "SCANNED {0}\nRESULT {1}", e.Item, e.Result ) );
+			//Console.SetOut( Console.Error );
+			//Console.WriteLine( string.Format( "SCANNED {0}\nRESULT {1}", e.Item, e.Result ) );
 		}
-
+		/// <summary>
+		/// Preferred threading model.
+		/// </summary>
 		public enum ThreadingModel
 		{
 			SyncronousSingleThead
 			,AsyncronousThreadPool
-			
 		}
 	}
 
 	#region ScanCompleted delegate
+	/// <summary>
+	/// Delegate prototype to be called when a scan is completed.
+	/// </summary>
 	public delegate void ScanCompleted( ScanCompletedArgs e );
+	/// <summary>
+	/// Delegate prototype to be called when a virus is found.
+	/// </summary>
+	public delegate void VirusFound( ScanCompletedArgs e);
+	/// <summary>
+	/// Arguments passed to the ScanCompleted and VirusFound delegates.
+	/// </summary>
 	public class ScanCompletedArgs
 	{
 		private string _item, _result;
