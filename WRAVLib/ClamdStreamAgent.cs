@@ -91,12 +91,17 @@ namespace WolfeReiter.AntiVirus
 					tcpclient.Close();
 				}
 			}
-			catch(SocketException ex)
+			catch(Exception ex)
 			{
-				if(_logger.IsDebugEnabled)
-					_logger.Error(ex);
+				if(ex is SocketException || ex is IOException)
+				{
+					if(_logger.IsDebugEnabled)
+						_logger.Error(ex);
+					else
+						_logger.Error(ex.Message);
+				}
 				else
-					_logger.Error(ex.Message);
+					throw;
 			}
 		}
 
@@ -149,16 +154,21 @@ namespace WolfeReiter.AntiVirus
 				if(outstr!=null && outstr.IndexOf(FOUND)>-1)
 					this.OnVirusFound( new ScanCompletedEventArgs( args.Id, outstr ) );
 			}
-			catch(SocketException ex)
+			catch(Exception ex)
 			{
-				if(_logger.IsDebugEnabled)
-					_logger.Error(ex);
+				if(ex is SocketException || ex is IOException)
+				{
+					if(_logger.IsDebugEnabled)
+						_logger.Error(ex);
+					else
+						_logger.Error(ex.Message);
+				}
 				else
-					_logger.Error(ex.Message);
-
-				outstr = ex.Message;
+					throw;
 			}
+
 			this.OnItemScanCompleted( new ScanCompletedEventArgs( args.Id, outstr ) );
+
 		}
 
 		#region IVirusScanAgent Members
@@ -210,12 +220,19 @@ namespace WolfeReiter.AntiVirus
 					if(file.Exists)
 					{
 						using( Stream stream = file.OpenRead() )
-							Scan(file.FullName, file.OpenRead());		
+							Scan(file.FullName, stream);		
 					}
 					else
 					{
 						this.OnItemScanCompleted( new ScanCompletedEventArgs( file.FullName, ResourceManagers.Strings.GetString(STR_SCAN_ERR_FILE_NOT_EXIST) ) );
 					}
+				}
+				catch(OutOfMemoryException) 
+				{
+					// can happen if several HUGE files are opened in a row
+					// we need to force the garbage collector to free up some space
+					GC.Collect();
+					Scan ( file );
 				}
 				catch(Exception ex)
 				{
