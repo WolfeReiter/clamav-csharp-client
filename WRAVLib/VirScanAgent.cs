@@ -62,8 +62,9 @@ namespace WolfeReiter.AntiVirus
 		}
         protected virtual void ItemScanCompletedHandler( ScanCompletedArgs e )
 		{
+			//TODO: Put Log4Net here instead.
 			Console.SetOut( Console.Error );
-			Console.WriteLine( string.Format( "SCANNED {0} RESULT {1}", e.Item, e.Result ) );
+			Console.WriteLine( string.Format( "SCANNED {0}\nRESULT {1}", e.Item, e.Result ) );
 		}
 
 	}
