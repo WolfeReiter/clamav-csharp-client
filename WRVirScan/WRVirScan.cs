@@ -14,8 +14,10 @@ namespace WolfeReiter.AntiVirus.ClamAV
 		public const string CLAMD_HOST	 = "localhost";
 		public static void Main()
 		{	
+			//TODO: Implement switches rather than an infinite "scan this" loop
+			log4net.Config.DOMConfigurator.Configure();
 			WriteVersion();
-			IVirScanAgent agent = new ClamdStreamAgent(CLAMD_HOST, CLAMD_PORT);
+			IVirScanAgent agent = new ClamdStreamAgent(CLAMD_HOST, CLAMD_PORT, true);
 			Console.WriteLine(agent.Version);
 			while (true)
 			{
