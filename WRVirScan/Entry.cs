@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 
 namespace WolfeReiter.AntiVirus.ConsoleDemo
 {
@@ -15,8 +16,16 @@ namespace WolfeReiter.AntiVirus.ConsoleDemo
 		public static void Main(string[] args)
 		{	
 			log4net.Config.DOMConfigurator.Configure();
-			ScanJob job = new ScanJob(  ScanArgs.Parse( args ) );
-			job.Run();
+			try
+			{
+				ScanJob job = new ScanJob(  ScanArgs.Parse( args ) );
+				job.Run();
+			}
+			catch(ArgumentException ex)
+			{
+				Debug.WriteLine(ex);
+				Console.WriteLine(ex.Message);
+			}
 		}
 	}
 }
