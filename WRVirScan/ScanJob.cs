@@ -36,6 +36,8 @@ namespace WolfeReiter.AntiVirus
 		/// </summary>
 		public void Run()
 		{
+			DateTime start = DateTime.Now;
+
 			if( _args.ShowHelp || _args.FileSystem==null )
 				WriteHelp();
 			if ( _args.ShowVer )
@@ -43,7 +45,7 @@ namespace WolfeReiter.AntiVirus
 			if( !_args.ShowHelp && _args.FileSystem!=null )
 			{
 				_agent.Scan( _args.FileSystem, _args.Recurse );
-				WriteStats();
+				WriteStats( start );
 			}
         
 #if DEBUG 
@@ -148,15 +150,19 @@ switches:
 		/// <summary>
 		/// Writes file scan statistics to the console.
 		/// </summary>
-		private void WriteStats()
+		private void WriteStats(DateTime startTime)
 		{
+			TimeSpan elapsed = DateTime.Now - startTime;
+			const string TIME = "{0}d:{1}h:{2}m:{3}s.{4}ms";
 			const string STATS = @"
-************************
+***********************************
 ** FILES SCANNED: {0}
 ** VIRUSES FOUND: {1}
-************************
+** ELAPSED TIME:  {2}
+***********************************
 ";
-			Console.WriteLine( string.Format( STATS, _scancount, _vircount ) );
+			string timestr = string.Format(TIME,elapsed.Days,elapsed.Hours,elapsed.Minutes,elapsed.Seconds,elapsed.Milliseconds);
+			Console.WriteLine( string.Format( STATS, _scancount, _vircount, timestr ) );
 		}
 		#endregion
 	}
