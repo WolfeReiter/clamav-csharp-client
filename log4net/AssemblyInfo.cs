@@ -88,8 +88,8 @@ using System.Runtime.CompilerServices;
 //
 #if STRONG
 [assembly: AssemblyDelaySign(false)]
-[assembly: AssemblyKeyFile(@"..\..\..\log4net.snk")]
+//[assembly: AssemblyKeyFile(@"..\..\..\log4net.snk")]
+[assembly: AssemblyKeyFile(@"C:\Program Files\WolfeReiter\WolfeReiter.snk")]
 #endif
 // We do not use a CSP key for strong naming
 // [assembly: AssemblyKeyName("")]
-
