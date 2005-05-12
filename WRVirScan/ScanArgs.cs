@@ -141,7 +141,7 @@ namespace WolfeReiter.AntiVirus.ConsoleDemo
 						case FLAG_CLAMD_HOST_SHORT :
 							goto case FLAG_CLAMD_HOST_LONG;
 						case FLAG_CLAMD_HOST_LONG :
-							if( args.Length<i+1 && !args[i+1].StartsWith("-") )
+							if( args.Length>i+1 && !args[i+1].StartsWith("-") )
 							{
 								sargs.Host = args[++i];								
 							}
@@ -151,9 +151,9 @@ namespace WolfeReiter.AntiVirus.ConsoleDemo
 							}
 							break;
 						case FLAG_CLAMD_PORT_SHORT :
-							goto case FLAG_CLAMD_HOST_LONG;
+							goto case FLAG_CLAMD_PORT_LONG;
 						case FLAG_CLAMD_PORT_LONG :
-							if( args.Length<i+1 && !args[i+1].StartsWith("-") )
+							if( args.Length>i+1 && !args[i+1].StartsWith("-") )
 							{
 								try
 								{
