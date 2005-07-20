@@ -108,8 +108,11 @@ namespace WolfeReiter.AntiVirus
 			using ( TcpClient tcpclient = new TcpClient( this.ClamdHost, streamPort ) )
 			using ( NetworkStream netstream = tcpclient.GetStream() )
 			{	
-				for( stream.Position=0; stream.Position < stream.Length; stream.Position+=TCP_CHUNK)
+				_logger.Debug("Initial stream.Length: " + stream.Length);
+				for(long i=0; stream.Position < stream.Length; i+=TCP_CHUNK)
 				{
+					stream.Position = i;
+					_logger.Debug("stream.Position: " + stream.Position);
 					if( (stream.Length - stream.Position) < TCP_CHUNK)
 						buff = new byte[Convert.ToInt32( stream.Length-stream.Position )];
 						
