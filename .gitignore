@@ -1,0 +1,41 @@
+# compiled directries #
+#######################
+bin/
+obj/
+
+# NuGet local storage #
+#######################
+packages/*
+
+# external resources #
+######################
+HBP.Web.PortalPro/Images/*/
+
+# ide user or temp files #
+##########################
+*.userprefs
+*.suo
+*.csproj.user
+*.sqlproj.user
+*~ #vim temp file
+App_Data/
+TestResults/
+*.dbmdl
+*.vssscc
+*.vspcc
+
+# OS generated files #
+######################
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Icon?
+ehthumbs.db
+Thumbs.db
+
+# SourceGear Vault hidden directories #
+#######################################
+_sgbak/
+_sgvault/
